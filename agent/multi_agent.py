@@ -12,23 +12,36 @@ client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
 # -----------------------------
-# Utility: Safe JSON parser
+# Utility: Robust JSON parser
 # -----------------------------
 def extract_json(text):
     if not text:
         return None
 
+    # Remove markdown formatting
     text = text.replace("```json", "").replace("```", "").strip()
 
+    # Try direct parsing
     try:
         return json.loads(text)
     except:
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
+        pass
+
+    # Extract JSON block safely
+    match = re.search(r"\{[\s\S]*\}", text)
+    if match:
+        json_str = match.group(0)
+
+        try:
+            return json.loads(json_str)
+        except:
             try:
-                return json.loads(match.group(0))
+                # Escape problematic newlines
+                json_str = json_str.replace("\n", "\\n")
+                return json.loads(json_str)
             except:
                 return None
+
     return None
 
 
@@ -98,9 +111,14 @@ Format:
 
         # Finish condition
         if action == "finish":
+            final_answer = parsed.get("final_answer")
+
+            if not final_answer:
+                final_answer = "Agent completed execution but did not return structured answer"
+
             return {
                 "logs": logs,
-                "result": parsed.get("final_answer", "Completed")
+                "result": final_answer
             }
 
         tool = get_tool(action)
@@ -109,7 +127,7 @@ Format:
             logs.append(f"❌ Invalid tool selected: {action}")
             return {
                 "logs": logs,
-                "result": "Invalid tool"
+                "result": "Invalid tool selected by agent"
             }
 
         tool_input = parsed.get("input", input_data)
@@ -123,12 +141,12 @@ Format:
             logs.append(f"❌ Tool execution error: {str(e)}")
             return {
                 "logs": logs,
-                "result": "Tool failure"
+                "result": "Tool execution failure"
             }
 
         logs.append(f"📡 Tool Response → {result}")
 
-        # Update context
+        # Update context for next reasoning step
         context += f"\nUsed {action} → {result}"
 
     return {
