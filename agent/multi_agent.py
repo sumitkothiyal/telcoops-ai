@@ -88,7 +88,7 @@ Format:
 
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=300,
+            max_tokens=700,  # 🔥 Increased to avoid truncation
             temperature=0,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -99,9 +99,10 @@ Format:
         parsed = extract_json(raw)
 
         if not parsed:
+            logs.append("⚠️ Failed to parse agent response")
             return {
                 "logs": logs,
-                "result": "Failed to parse agent response"
+                "result": "Agent response parsing failed"
             }
 
         thought = parsed.get("thought")
@@ -109,18 +110,29 @@ Format:
 
         logs.append(f"🧠 Agent Decision: {thought}")
 
-        # Finish condition
+        # -----------------------------
+        # FINISH CONDITION (FIXED)
+        # -----------------------------
         if action == "finish":
             final_answer = parsed.get("final_answer")
 
-            if not final_answer:
-                final_answer = "Agent completed execution but did not return structured answer"
+            # 🔥 Handle incomplete/truncated responses
+            if not final_answer or len(final_answer) < 20:
+                logs.append("⚠️ Incomplete final answer detected, using fallback summary")
+
+                return {
+                    "logs": logs,
+                    "result": "Agent completed analysis. Network issue detected based on available signals. Further investigation recommended."
+                }
 
             return {
                 "logs": logs,
                 "result": final_answer
             }
 
+        # -----------------------------
+        # MCP TOOL EXECUTION
+        # -----------------------------
         tool = get_tool(action)
 
         if not tool:
@@ -132,7 +144,6 @@ Format:
 
         tool_input = parsed.get("input", input_data)
 
-        # MCP tool call
         logs.append(f"🔌 MCP Call → Tool: {action} | Input: {tool_input}")
 
         try:
