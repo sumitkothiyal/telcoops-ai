@@ -3,7 +3,7 @@ from agent.multi_agent import run_multi_agent
 
 st.set_page_config(page_title="TelcoOps AI", layout="wide")
 
-st.title("📡 TelcoOps AI - Multi-Agent System")
+st.title("📡 TelcoOps AI - Autonomous Agent System")
 
 location = st.selectbox("Select Location", ["Dallas", "New York"])
 
@@ -12,17 +12,14 @@ scenario = st.selectbox(
     ["Normal Day", "Peak Traffic", "Local Outage", "Major Outage"]
 )
 
-if st.button("Run Multi-Agent"):
+if st.button("Run Autonomous Agent"):
     input_data = f"{location} | {scenario}"
 
     result = run_multi_agent(input_data)
 
-    st.subheader("🧠 Agent Logs")
+    st.subheader("🧠 Agent Reasoning Flow (Agentic AI)")
     for log in result.get("logs", []):
         st.write(log)
 
-    st.subheader("📋 Plan")
-    st.write(result.get("plan"))
-
-    st.subheader("📊 Final Analysis")
-    st.json(result.get("analysis"))
+    st.subheader("📊 Final Autonomous Decision")
+    st.write(result.get("result"))
